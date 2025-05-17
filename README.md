@@ -8,6 +8,8 @@ For the Classic WoW version see https://www.curseforge.com/wow/addons/xiaomount
 
 ## Commands
 
+You may want to disable XiaoMount in some scenarios, such as when clearing trash in a raid or a boss pull that involves mounting. You can use these commands to disable/enable the autoequip:
+
 ```
 /xm enabled - get current enabled status
 /xm enabled 1 - enable autoequipping
