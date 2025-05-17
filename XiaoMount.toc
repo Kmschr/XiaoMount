@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: |cff33ffccXiao|cffffffffMount
 ## Author: Smallguy
-## Notes: XiaoMount Turtle Edition
+## Notes: Riding Equipment Auto-equipper for TurtleWoW
 ## Version: 1.0
 ## SavedVariables: XiaoMountDB
 
