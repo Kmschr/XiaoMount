@@ -156,7 +156,7 @@ function XiaoMount_EquipRidingSet()
             bag, slot = XiaoMount_RidingGloves()
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, GLOVES_SLOT)
-                XiaoMountDB.glovesRestoreLink = equippedTrinket2Link
+                XiaoMountDB.glovesRestoreLink = equippedGlovesLink
             end
         end
     end
@@ -168,7 +168,7 @@ function XiaoMount_EquipRidingSet()
             bag, slot = XiaoMount_BestRidingBoots()
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
-                XiaoMountDB.bootsRestoreLink = equippedTrinket2Link
+                XiaoMountDB.bootsRestoreLink = equippedBootsLink
             end
         end
     end
