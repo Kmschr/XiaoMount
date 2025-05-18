@@ -2,7 +2,7 @@
 ## Title: |cff33ffccXiao|cffffffffMount
 ## Author: Smallguy
 ## Notes: Riding Equipment Auto-equipper for TurtleWoW
-## Version: 1.1.2
+## Version: 1.1.3
 ## SavedVariables: XiaoMountDB
 
 XiaoMount.lua

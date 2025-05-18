@@ -32,7 +32,7 @@ local S_DEEPDIVE_HELM_ITEM_ID = "10506"     -- underwater breathing
 -- Enchant IDs
 local S_GLOVE_ENCHANT = "930"           -- Enchant Gloves - Riding skill
 local S_THORIUM_SPURS_ENCHANT = "3026"  -- 7% mount speed (blacksmithing)
-local S_MITHRIL_SPURS_ENCHANT = "9964"  -- 6% mount speed (blacksmithing)
+local S_MITHRIL_SPURS_ENCHANT = "464"  -- 6% mount speed (blacksmithing)
 
 local XiaoMount = CreateFrame("Frame")
 XiaoMount:RegisterEvent("ADDON_LOADED")
@@ -78,10 +78,6 @@ end)
 ------------------------------------------------
 XiaoMount:SetScript("OnUpdate", function()
     local time = GetTime()
-    -- if (XiaoMount.dismountElapsed ~= nil) then
-    --    XiaoMount.dismountElapsed = XiaoMount.dismountElapsed + elapsed
-    -- end
-
     -- limit amount of updates occurring to 10 per second
     if (time - XiaoMount.lastUpdate > UPDATE_INTERVAL) then
         XiaoMount.lastUpdate = time
@@ -111,7 +107,7 @@ XiaoMount:SetScript("OnUpdate", function()
         if XiaoMount.lastDismounted == nil then
             XiaoMount.lastDismounted = GetTime()
         elseif time - XiaoMount.lastDismounted > DISMOUNT_DELAY then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff8000Xiao|rMount dismounting detected")
+            -- DEFAULT_CHAT_FRAME:AddMessage("|cffff8000Xiao|rMount dismounting detected")
             XiaoMount.lastDismounted = GetTime()
             XiaoMount_UnequipRidingSet()
             XiaoMountDB.mounted = false
