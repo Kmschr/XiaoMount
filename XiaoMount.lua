@@ -38,14 +38,13 @@ local XiaoMount = CreateFrame("Frame")
 XiaoMount:RegisterEvent("ADDON_LOADED")
 XiaoMount:RegisterEvent('PLAYER_ENTERING_WORLD')
 XiaoMount:RegisterEvent('PLAYER_LEAVING_WORLD')
-XiaoMount:RegisterEvent("SPELLCAST_START")    -- Casting started
-XiaoMount:RegisterEvent("SPELLCAST_STOP")     -- Casting finished/interrupted
-XiaoMount:RegisterEvent("SPELLCAST_FAILED")   -- Casting failed
-XiaoMount:RegisterEvent("SPELLCAST_INTERRUPTED") -- Casting interrupted
-XiaoMount:RegisterEvent("SPELLCAST_DELAYED")  -- Casting delayed (e.g., pushback)
-XiaoMount:RegisterEvent("SPELLCAST_CHANNEL_START") -- Channeling started
-XiaoMount:RegisterEvent("SPELLCAST_CHANNEL_UPDATE") -- Channeling updated (e.g., pushback)
-XiaoMount:RegisterEvent("SPELLCAST_CHANNEL_STOP")  -- Channeling finished
+XiaoMount:RegisterEvent("SPELLCAST_START")
+XiaoMount:RegisterEvent("SPELLCAST_STOP")
+XiaoMount:RegisterEvent("SPELLCAST_FAILED")
+XiaoMount:RegisterEvent("SPELLCAST_INTERRUPTED")
+XiaoMount:RegisterEvent("SPELLCAST_CHANNEL_START")
+XiaoMount:RegisterEvent("SPELLCAST_CHANNEL_STOP")
+XiaoMount:RegisterEvent("MIRROR_TIMER_START")      -- Fired when start ticking breath/fatigue
 
 -- Note: vanillatweaks can fire duplicate events
 ------------------------------------------------
@@ -64,12 +63,15 @@ XiaoMount:SetScript("OnEvent", function()
         XiaoMount.hasEnteredWorld = false
     elseif event == "PLAYER_ENTERING_WORLD" then
         XiaoMount.hasEnteredWorld = true
-    elseif event == "SPELLCAST_START" then
+    elseif event == "SPELLCAST_START" or event == "SPELLCAST_CHANNEL_START" then
         XiaoMount.casting = true
-    elseif event == "SPELLCAST_CHANNEL_START" then
-        XiaoMount.casting = true
-    elseif event == "SPELLCAST_STOP" or event == "SPELLCAST_CHANNEL_STOP" then
+    elseif event == "SPELLCAST_STOP" or event == "SPELLCAST_CHANNEL_STOP"
+            or event == "SPELLCAST_FAILED" or event == "SPELLCAST_INTERRUPTED" then
         XiaoMount.casting = false
+    elseif event == "MIRROR_TIMER_START" then
+        if arg6 == "Breath" and XiaoMountDB.enabled then
+            XiaoMount_EquipSwimmingSet()
+        end
     end
 end)
 
@@ -116,6 +118,8 @@ XiaoMount:SetScript("OnUpdate", function()
 end)
 
 function XiaoMount_EquipRidingSet()
+    XiaoMount_UnequipSwimmingSet()
+
     bag, slot, bag2, slot2 = XiaoMount_BestRidingTrinket()
     local equippedTrinket1Link = GetInventoryItemLink("player", TRINKET_1_SLOT)
     if equippedTrinket1Link then
@@ -126,7 +130,9 @@ function XiaoMount_EquipRidingSet()
                 and itemId ~= S_GNOME_CAR_KEY_ID then
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
-                XiaoMountDB.trinketRestoreLink1 = equippedTrinket1Link
+                if XiaoMountDB.trinketRestoreLink1 == nil then
+                    XiaoMountDB.trinketRestoreLink1 = equippedTrinket1Link
+                end
             end
         end
     end
@@ -140,7 +146,9 @@ function XiaoMount_EquipRidingSet()
                 and itemId ~= S_GNOME_CAR_KEY_ID then
             if bag2 ~= nil then
                 XiaoMount_EquipItem(bag2, slot2, TRINKET_2_SLOT)
-                XiaoMountDB.trinketRestoreLink2 = equippedTrinket2Link
+                if XiaoMountDB.trinketRestoreLink2 == nil then
+                    XiaoMountDB.trinketRestoreLink2 = equippedTrinket2Link
+                end
             end
         end
     end
@@ -152,7 +160,9 @@ function XiaoMount_EquipRidingSet()
             bag, slot = XiaoMount_RidingGloves()
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, GLOVES_SLOT)
-                XiaoMountDB.glovesRestoreLink = equippedGlovesLink
+                if XiaoMountDB.glovesRestoreLink == nil then
+                    XiaoMountDB.glovesRestoreLink = equippedGlovesLink
+                end
             end
         end
     end
@@ -164,8 +174,173 @@ function XiaoMount_EquipRidingSet()
             bag, slot = XiaoMount_BestRidingBoots()
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
+                if XiaoMountDB.bootsRestoreLink == nil then
+                    XiaoMountDB.bootsRestoreLink = equippedBootsLink
+                end
+            end
+        end
+    end
+end
+
+function XiaoMount_EquipSwimmingSet()
+    bag, slot, bag2, slot2 = XiaoMount_SwimmingRings()
+    local equippedRing1Link = GetInventoryItemLink("player", RING_1_SLOT)
+    if equippedRing1Link then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedRing1Link)
+        if itemId ~= S_OCEANS_GAZE_ID then
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, RING_1_SLOT)
+                XiaoMountDB.ringRestoreLink1 = equippedRing1Link
+            end
+        end
+    end
+
+    local equippedRing2Link = GetInventoryItemLink("player", RING_2_SLOT)
+    if equippedRing2Link then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedRing2Link)
+        if itemId ~= S_OCEANS_GAZE_ID then
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, RING_2_SLOT)
+                XiaoMountDB.ringRestoreLink2 = equippedRing2Link
+            end
+        end
+    end
+
+    local equippedTrinket1Link = GetInventoryItemLink("player", TRINKET_1_SLOT)
+    if equippedTrinket1Link then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedTrinket1Link)
+        if itemId ~= S_ICE_PEARL_KANEQNUUN_ID then
+            bag, slot = XiaoMount_FindItem(S_ICE_PEARL_KANEQNUUN_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
+                XiaoMountDB.trinketRestoreLink1 = equippedTrinket1Link
+            end
+        end
+    end
+
+    local equippedTrinket2Link = GetInventoryItemLink("player", TRINKET_2_SLOT)
+    if equippedTrinket2Link then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedTrinket2Link)
+        if itemId ~= S_RETHRESS_TIDE_CREST_ID then
+            bag, slot = XiaoMount_FindItem(S_RETHRESS_TIDE_CREST_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, TRINKET_2_SLOT)
+                XiaoMountDB.trinketRestoreLink1 = equippedTrinket2Link
+            end
+        end
+    end
+
+    local equippedBeltLink = GetInventoryItemLink("player", BELT_SLOT)
+    if equippedBeltLink then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedBeltLink)
+        if itemId ~= S_AZURE_BELT_ITEM_ID then
+            bag, slot = XiaoMount_FindItem(S_AZURE_BELT_ITEM_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, BELT_SLOT)
+                XiaoMountDB.beltRestoreLink = equippedBeltLink
+            end
+        end
+    end
+
+    local equippedChestLink = GetInventoryItemLink("player", CHEST_SLOT)
+    if equippedChestLink then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedChestLink)
+        if itemId ~= S_CAPTAINS_OVERCOAT_ID then
+            bag, slot = XiaoMount_FindItem(S_CAPTAINS_OVERCOAT_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, CHEST_SLOT)
+                XiaoMountDB.chestRestoreLink = equippedChestLink
+            end
+        end
+    end
+
+    local equippedBootsLink = GetInventoryItemLink("player", BOOTS_SLOT)
+    if equippedBootsLink then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedBootsLink)
+        if itemId ~= S_DEEP_STRIDERS_ID then
+            bag, slot = XiaoMount_FindItem(S_DEEP_STRIDERS_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
                 XiaoMountDB.bootsRestoreLink = equippedBootsLink
             end
+        end
+    end
+
+    local equippedHelmLink = GetInventoryItemLink("player", HELM_SLOT)
+    if equippedHelmLink then
+        local itemId, _ = XiaoMount_ParseItemLink(equippedHelmLink)
+        if itemId ~= S_DEEPDIVE_HELM_ITEM_ID then
+            bag, slot = XiaoMount_FindItem(S_DEEPDIVE_HELM_ITEM_ID)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, HELM_SLOT)
+                XiaoMountDB.helmRestoreLink = equippedHelmLink
+            end
+        end
+    end
+end
+
+function XiaoMount_UnequipSwimmingSet()
+    if XiaoMountDB.beltRestoreLink then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.beltRestoreLink)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, BELT_SLOT)
+            XiaoMountDB.beltRestoreLink = nil
+        end
+    end
+
+    if XiaoMountDB.trinketRestoreLink1 then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink1)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
+            XiaoMountDB.trinketRestoreLink1 = nil
+        end
+    end
+
+    if XiaoMountDB.trinketRestoreLink2 then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink2)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, TRINKET_2_SLOT)
+            XiaoMountDB.trinketRestoreLink2 = nil
+        end
+    end
+
+    if XiaoMountDB.ringRestoreLink1 then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.ringRestoreLink1)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, RING_1_SLOT)
+            XiaoMountDB.ringRestoreLink1 = nil
+        end
+    end
+
+    if XiaoMountDB.ringRestoreLink2 then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.ringRestoreLink2)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, RING_2_SLOT)
+            XiaoMountDB.ringRestoreLink2 = nil
+        end
+    end
+
+    if XiaoMountDB.chestRestoreLink then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.chestRestoreLink)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, CHEST_SLOT)
+            XiaoMountDB.chestRestoreLink = nil
+        end
+    end
+
+    if XiaoMountDB.bootsRestoreLink then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.bootsRestoreLink)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
+            XiaoMountDB.bootsRestoreLink = nil
+        end
+    end
+
+    if XiaoMountDB.helmRestoreLink then
+        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.helmRestoreLink)
+        if bag ~= nil then
+            XiaoMount_EquipItem(bag, slot, HELM_SLOT)
+            XiaoMountDB.helmRestoreLink = nil
         end
     end
 end
@@ -250,6 +425,31 @@ function XiaoMount_BestRidingTrinket()
     return trinketBag, trinketSlot, trinket2Bag, trinket2Slot
 end
 
+function XiaoMount_SwimmingRings()
+    local ringBag = nil
+    local ringSlot = nil
+    local ring2Bag = nil
+    local ring2Slot = nil
+    for bag = 0, 4 do
+        for slot = 0, GetContainerNumSlots(bag) do
+            local itemLink = GetContainerItemLink(bag, slot)
+            if itemLink then
+                local itemId, _ = XiaoMount_ParseItemLink(itemLink)
+                if itemId == S_OCEANS_GAZE_ID then
+                    if ringBag ~= nil then
+                        ring2Bag = bag
+                        ring2Slot = slot
+                    else
+                        ringBag = bag
+                        ringSlot = slot
+                    end
+                end
+            end
+        end
+    end
+    return ringBag, ringSlot, ring2Bag, ring2Slot
+end
+
 function XiaoMount_RidingGloves()
     for bag = 0, 4 do
         for slot = 0, GetContainerNumSlots(bag) do
@@ -284,6 +484,21 @@ function XiaoMount_BestRidingBoots()
         end
     end
     return bootsBag, bootsSlot
+end
+
+function XiaoMount_FindItem(item)
+    for bag = 0, 4 do
+        for slot = 0, GetContainerNumSlots(bag) do
+            local itemLink = GetContainerItemLink(bag, slot)
+            if itemLink then
+                local itemId, _ = XiaoMount_ParseItemLink(itemLink)
+                if item == itemId then
+                    return bag, slot
+                end
+            end
+        end
+    end
+    return nil, nil
 end
 
 function XiaoMount_EquipItem(bag, slot, inventorySlot)
