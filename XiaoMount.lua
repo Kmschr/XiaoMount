@@ -69,7 +69,7 @@ XiaoMount:SetScript("OnEvent", function()
             or event == "SPELLCAST_FAILED" or event == "SPELLCAST_INTERRUPTED" then
         XiaoMount.casting = false
     elseif event == "MIRROR_TIMER_START" then
-        if arg6 == "Breath" and XiaoMountDB.enabled then
+        if arg6 ~= "Fatigue" and XiaoMountDB.enabled then
             XiaoMount_EquipSwimmingSet()
         end
     end
@@ -89,12 +89,12 @@ XiaoMount:SetScript("OnUpdate", function()
 
     -- dont update when player isnt ready to change gear
     if not XiaoMount.hasEnteredWorld
-        or not UnitExists("player")
-        or not UnitIsConnected("player")
-        or UnitAffectingCombat("player")
-        or UnitIsDeadOrGhost("player")
-        or XiaoMount.casting
-        or not XiaoMountDB.enabled then
+            or not UnitExists("player")
+            or not UnitIsConnected("player")
+            or UnitAffectingCombat("player")
+            or UnitIsDeadOrGhost("player")
+            or XiaoMount.casting
+            or not XiaoMountDB.enabled then
         return
     end
 
@@ -118,7 +118,10 @@ XiaoMount:SetScript("OnUpdate", function()
 end)
 
 function XiaoMount_EquipRidingSet()
-    XiaoMount_UnequipSwimmingSet()
+    XiaoMount_UnequipSwimmingSetNoOverlap()
+    local trinket1 = true
+    local trinket2 = true
+    local boots = true
 
     bag, slot, bag2, slot2 = XiaoMount_BestRidingTrinket()
     local equippedTrinket1Link = GetInventoryItemLink("player", TRINKET_1_SLOT)
@@ -130,6 +133,7 @@ function XiaoMount_EquipRidingSet()
                 and itemId ~= S_GNOME_CAR_KEY_ID then
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
+                trinket1 = false
                 if XiaoMountDB.trinketRestoreLink1 == nil then
                     XiaoMountDB.trinketRestoreLink1 = equippedTrinket1Link
                 end
@@ -146,6 +150,7 @@ function XiaoMount_EquipRidingSet()
                 and itemId ~= S_GNOME_CAR_KEY_ID then
             if bag2 ~= nil then
                 XiaoMount_EquipItem(bag2, slot2, TRINKET_2_SLOT)
+                trinket2 = false
                 if XiaoMountDB.trinketRestoreLink2 == nil then
                     XiaoMountDB.trinketRestoreLink2 = equippedTrinket2Link
                 end
@@ -174,12 +179,15 @@ function XiaoMount_EquipRidingSet()
             bag, slot = XiaoMount_BestRidingBoots()
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
+                boots = false
                 if XiaoMountDB.bootsRestoreLink == nil then
                     XiaoMountDB.bootsRestoreLink = equippedBootsLink
                 end
             end
         end
     end
+
+    XiaoMount_UnequipSwimmingSet(trinket1, trinket2, boots)
 end
 
 function XiaoMount_EquipSwimmingSet()
@@ -199,8 +207,8 @@ function XiaoMount_EquipSwimmingSet()
     if equippedRing2Link then
         local itemId, _ = XiaoMount_ParseItemLink(equippedRing2Link)
         if itemId ~= S_OCEANS_GAZE_ID then
-            if bag ~= nil then
-                XiaoMount_EquipItem(bag, slot, RING_2_SLOT)
+            if bag2 ~= nil then
+                XiaoMount_EquipItem(bag2, slot2, RING_2_SLOT)
                 XiaoMountDB.ringRestoreLink2 = equippedRing2Link
             end
         end
@@ -225,7 +233,7 @@ function XiaoMount_EquipSwimmingSet()
             bag, slot = XiaoMount_FindItem(S_RETHRESS_TIDE_CREST_ID)
             if bag ~= nil then
                 XiaoMount_EquipItem(bag, slot, TRINKET_2_SLOT)
-                XiaoMountDB.trinketRestoreLink1 = equippedTrinket2Link
+                XiaoMountDB.trinketRestoreLink2 = equippedTrinket2Link
             end
         end
     end
@@ -279,28 +287,44 @@ function XiaoMount_EquipSwimmingSet()
     end
 end
 
-function XiaoMount_UnequipSwimmingSet()
+function XiaoMount_UnequipSwimmingSet(trinket1, trinket2, boots)
+    if trinket1 then
+        if XiaoMountDB.trinketRestoreLink1 then
+            bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink1)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
+                XiaoMountDB.trinketRestoreLink1 = nil
+            end
+        end
+    end
+
+    if trinket2 then
+        if XiaoMountDB.trinketRestoreLink2 then
+            bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink2)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, TRINKET_2_SLOT)
+                XiaoMountDB.trinketRestoreLink2 = nil
+            end
+        end
+    end
+
+    if boots then
+        if XiaoMountDB.bootsRestoreLink then
+            bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.bootsRestoreLink)
+            if bag ~= nil then
+                XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
+                XiaoMountDB.bootsRestoreLink = nil
+            end
+        end
+    end
+end
+
+function XiaoMount_UnequipSwimmingSetNoOverlap()
     if XiaoMountDB.beltRestoreLink then
         bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.beltRestoreLink)
         if bag ~= nil then
             XiaoMount_EquipItem(bag, slot, BELT_SLOT)
             XiaoMountDB.beltRestoreLink = nil
-        end
-    end
-
-    if XiaoMountDB.trinketRestoreLink1 then
-        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink1)
-        if bag ~= nil then
-            XiaoMount_EquipItem(bag, slot, TRINKET_1_SLOT)
-            XiaoMountDB.trinketRestoreLink1 = nil
-        end
-    end
-
-    if XiaoMountDB.trinketRestoreLink2 then
-        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.trinketRestoreLink2)
-        if bag ~= nil then
-            XiaoMount_EquipItem(bag, slot, TRINKET_2_SLOT)
-            XiaoMountDB.trinketRestoreLink2 = nil
         end
     end
 
@@ -325,14 +349,6 @@ function XiaoMount_UnequipSwimmingSet()
         if bag ~= nil then
             XiaoMount_EquipItem(bag, slot, CHEST_SLOT)
             XiaoMountDB.chestRestoreLink = nil
-        end
-    end
-
-    if XiaoMountDB.bootsRestoreLink then
-        bag, slot = XiaoMount_FindItemByLink(XiaoMountDB.bootsRestoreLink)
-        if bag ~= nil then
-            XiaoMount_EquipItem(bag, slot, BOOTS_SLOT)
-            XiaoMountDB.bootsRestoreLink = nil
         end
     end
 
@@ -502,19 +518,26 @@ function XiaoMount_FindItem(item)
 end
 
 function XiaoMount_EquipItem(bag, slot, inventorySlot)
+    ClearCursor();
     PickupContainerItem(bag, slot)
     PickupInventoryItem(inventorySlot)
 end
 
 function XiaoMount_ParseItemLink(link)
-    if not link then return nil, nil end
+    if not link then
+        return nil, nil
+    end
 
     -- Find the positions of the colons after "item:"
     local firstColon = string.find(link, ":", 1, true)  -- Finds first ':'
-    if not firstColon then return nil, nil end
+    if not firstColon then
+        return nil, nil
+    end
 
     local secondColon = string.find(link, ":", firstColon + 1, true)  -- Finds second ':'
-    if not secondColon then return nil, nil end
+    if not secondColon then
+        return nil, nil
+    end
 
     local thirdColon = string.find(link, ":", secondColon + 1, true)  -- Finds third ':'
     -- If no third colon, the item has no enchant (e.g., "item:1234")
@@ -536,7 +559,8 @@ buffTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
 function XiaoMount_IsMounted()
     for i = 0, 15 do
         local buffIndex = GetPlayerBuff(i)
-        if buffIndex >= 0 then  -- -1 means no buff in slot
+        if buffIndex >= 0 then
+            -- -1 means no buff in slot
             buffTooltip:ClearLines()
             buffTooltip:SetPlayerBuff(buffIndex)
             local buffDescription = BuffScanTooltipTextLeft2:GetText()
@@ -559,11 +583,11 @@ SLASH_XIAOMOUNT2 = "/xm"
 SlashCmdList["XIAOMOUNT"] = function(msg, editbox)
     -- parse command arguments
     local args = {}
-	local i = 1
-	for arg in string.gfind(msg, '%S+') do
-		args[i] = arg
-		i = i + 1
-	end
+    local i = 1
+    for arg in string.gfind(msg, '%S+') do
+        args[i] = arg
+        i = i + 1
+    end
 
     if not args[1] then
         DEFAULT_CHAT_FRAME:AddMessage("|cffff8000Xiao|rMount:")
