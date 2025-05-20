@@ -184,6 +184,8 @@ function XiaoMount_EquipRidingSet()
                     XiaoMountDB.bootsRestoreLink = equippedBootsLink
                 end
             end
+        else
+            boots = false
         end
     end
 
