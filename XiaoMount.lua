@@ -69,7 +69,7 @@ XiaoMount:SetScript("OnEvent", function()
             or event == "SPELLCAST_FAILED" or event == "SPELLCAST_INTERRUPTED" then
         XiaoMount.casting = false
     elseif event == "MIRROR_TIMER_START" then
-        if arg6 ~= "Fatigue" and XiaoMountDB.enabled then
+        if arg1 == "BREATH" and XiaoMountDB.enabled then
             XiaoMount_EquipSwimmingSet()
         end
     end
@@ -530,24 +530,18 @@ function XiaoMount_ParseItemLink(link)
         return nil, nil
     end
 
-    -- Find the positions of the colons after "item:"
-    local firstColon = string.find(link, ":", 1, true)  -- Finds first ':'
+    local firstColon = string.find(link, ":", 1, true)
     if not firstColon then
         return nil, nil
     end
-
-    local secondColon = string.find(link, ":", firstColon + 1, true)  -- Finds second ':'
+    local secondColon = string.find(link, ":", firstColon + 1, true)
     if not secondColon then
         return nil, nil
     end
-
-    local thirdColon = string.find(link, ":", secondColon + 1, true)  -- Finds third ':'
-    -- If no third colon, the item has no enchant (e.g., "item:1234")
+    local thirdColon = string.find(link, ":", secondColon + 1, true)
     thirdColon = thirdColon or (string.len(link) + 1)
 
-    -- Extract itemId (between first and second colon)
     local itemId = string.sub(link, firstColon + 1, secondColon - 1)
-    -- Extract enchantId (between second and third colon)
     local enchantId = string.sub(link, secondColon + 1, thirdColon - 1)
 
     return itemId, enchantId
