@@ -17,4 +17,8 @@ You may want to disable XiaoMount in some scenarios, such as when clearing trash
 
 ## Updates
 
+- (1.2.5) Added fallback for item links with unique IDs (e.g. SWV trinket) to ensure correct equipment restoration
+- (1.2.4) Fixed issue where Feign Death would trigger swim equipment
+- (1.2.3) Boots with relevant enchants are now kept equipped and not swapped out
+- (1.2.2) Fixed Rethress Tide Crest trinket ID
 - (1.2.1) Added autoequip for swimming speed gear - items are equipped when you first start holding breath
