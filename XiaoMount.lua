@@ -399,6 +399,7 @@ end
 
 -- return the bag position of a item link
 function XiaoMount_FindItemByLink(itemLink)
+    -- First pass: Try exact link match
     for bag = 0, 4 do
         for slot = 0, GetContainerNumSlots(bag) do
             local link = GetContainerItemLink(bag, slot)
@@ -407,6 +408,23 @@ function XiaoMount_FindItemByLink(itemLink)
             end
         end
     end
+
+    -- Second pass: Try matching by Item ID (Fallback)
+    local targetId, _ = XiaoMount_ParseItemLink(itemLink)
+    if targetId then
+        for bag = 0, 4 do
+            for slot = 0, GetContainerNumSlots(bag) do
+                local link = GetContainerItemLink(bag, slot)
+                if link then
+                    local itemId, _ = XiaoMount_ParseItemLink(link)
+                    if itemId == targetId then
+                        return bag, slot
+                    end
+                end
+            end
+        end
+    end
+
     return nil, nil
 end
 
