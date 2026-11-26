@@ -1,24 +1,39 @@
-## XiaoMount - TurtleWoW Edition
+## XiaoMount - WoW: Forever Edition
 
-XiaoMount is an auto-equipper for riding speed and swim speed gear that will detect the best available riding equipment and equip it when you are mounted.
-When you dismount it will restore your original gear setup. It works out of the box without any configuration necessary. It has been made for TurtleWoW specific riding equipment.
+XiaoMount swaps in your best mount speed gear when you mount and your best swim speed gear when you swim, then puts your original gear back when you dismount or leave the water. No configuration needed.
 
-For the Classic WoW version see https://www.curseforge.com/wow/addons/xiaomount
+The TurtleWoW version lives on the [`turtle`](https://github.com/Kmschr/XiaoMount/tree/turtle) branch. For Classic WoW see https://www.curseforge.com/wow/addons/xiaomount
+
+## How it finds gear
+
+WoW: Forever has its own items, so XiaoMount reads item tooltips instead of keeping a list of item IDs:
+
+- **Mount speed**: "Increases mount speed by X%" on any armor, ring or trinket, plus the Mithril Spurs and Riding Skill glove enchants
+- **Swim speed**: "Increases swim speed by X%", and water breathing items (helms)
+- **Zone-limited bonuses** such as The Desert Rose ("... in Desert areas") are only used when nothing better is available
+- **Outrider's Gloves** (5%, does not stack with other mount speed) are worn on their own unless your other mount speed items add up to more than 5%
+
+It never swaps gear in combat, while dead, while casting or with an item on the cursor, and remembers your original gear across reloads.
 
 ## Commands
 
-You may want to disable XiaoMount in some scenarios, such as when clearing trash in a raid or a boss pull that involves mounting. You can use these commands to disable/enable the autoequip:
+```
+/xm        - status
+/xm on     - enable auto-equipping
+/xm off    - disable and put your original gear back
+/xm scan   - list the mount and swim items XiaoMount found, with their scores
+```
+
+If `/xm scan` misses one of your items, open an issue with its tooltip text.
+
+## Tests
+
+The gear rules (`Logic.lua`) run offline:
 
 ```
-/xm enabled - get current enabled status
-/xm enabled 1 - enable autoequipping
-/xm enabled 0 - disable autoequipping
+lua5.1 tests/logic.lua
 ```
 
 ## Updates
 
-- (1.2.5) Added fallback for item links with unique IDs (e.g. SWV trinket) to ensure correct equipment restoration
-- (1.2.4) Fixed issue where Feign Death would trigger swim equipment
-- (1.2.3) Boots with relevant enchants are now kept equipped and not swapped out
-- (1.2.2) Fixed Rethress Tide Crest trinket ID
-- (1.2.1) Added autoequip for swimming speed gear - items are equipped when you first start holding breath
+- (2.0.0) WoW: Forever rewrite: tooltip-based gear detection, Forever swimming detection, Outrider's Gloves, `/xm on|off|scan`. TurtleWoW version moved to the `turtle` branch

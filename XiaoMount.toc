@@ -1,8 +1,9 @@
-## Interface: 11200
+## Interface: 16001
 ## Title: |cff33ffccXiao|cffffffffMount
 ## Author: Smallguy
-## Notes: Riding and Swimming Equipment Auto-equipper for TurtleWoW
-## Version: 1.2.5
+## Notes: Swaps in mount speed gear while mounted and swim speed gear while swimming, then puts your gear back. /xm
+## Version: 2.0.0
 ## SavedVariables: XiaoMountDB
 
+Logic.lua
 XiaoMount.lua
