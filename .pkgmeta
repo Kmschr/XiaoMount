@@ -1,0 +1,6 @@
+package-as: XiaoMount
+
+ignore:
+  - tests
+  - tools
+  - dist

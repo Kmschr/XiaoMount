@@ -52,10 +52,29 @@ test("keeps worn helpers in place and skips duplicates", function()
   eq(plan[13], nil, "second copy of a unique trinket not used")
 end)
 
+test("scores stealth items", function()
+  eq(XM.Score({ "Equip: Increases your effective stealth level by 1." }).stealth, 1)
+  eq(XM.Score({ "Equip: Increases your effective stealth level." }).stealth, 1, "no number")
+  eq(XM.Score({ "Stealth +5" }).stealth, 5)
+  eq(XM.Score({ "Equip: Increases your stealth detection." }).stealth, 0, "detection isn't stealth")
+  eq(XM.Score({ "Use: Increases your effective stealth level by 5 for 10 sec." }).stealth, 0, "on-use skipped")
+end)
+
+test("picks the context to dress for", function()
+  eq(XM.Context({ mounted = true, swimming = true }), "mount")
+  eq(XM.Context({ stealthed = true, swimming = true, stealthGear = true }), "stealth")
+  eq(XM.Context({ stealthed = true, swimming = true }), "swim", "stealth gear turned off")
+  eq(XM.Context({}), nil)
+end)
+
 test("plans per context", function()
   local belt = item(7052, { 6 }, 0, 15)
   eq(next(XM.Plan("mount", { belt })), nil)
   eq(XM.Plan("swim", { belt })[6], belt)
+  local boots = item(8, { 8 })
+  boots.score.stealth = 1
+  eq(XM.Plan("stealth", { boots })[8], boots)
+  eq(next(XM.Plan("swim", { boots })), nil)
 end)
 
 test("recognizes Outrider's Gloves as exclusive", function()
@@ -80,6 +99,16 @@ test("exclusive gloves win unless the stacking items add up to more", function()
   eq(plan[13], carrot); eq(plan[8], spurs)
   outrider.equippedIn = 10
   eq(next(XM.Plan("mount", { outrider, carrot })), nil, "already worn")
+end)
+
+test("restores stay owed until the item is back in its slot", function()
+  local pending = { [13] = "item:100:0", [6] = "item:200:0", [8] = "item:300:0" }
+  local worn = { [13] = 100, [6] = 999, [8] = 999 }
+  local owned = { [100] = 1, [200] = 1, [300] = 0 }
+  local due = XM.Unrestored(pending, function(slot) return worn[slot] end, function(id) return owned[id] end)
+  eq(due[13], nil, "back in place")
+  eq(due[6], "item:200:0", "swap refused, try again")
+  eq(due[8], nil, "item gone")
 end)
 
 print(passed .. " passed, " .. failed .. " failed")

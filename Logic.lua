@@ -42,10 +42,17 @@ local function percent(line, what)
   return tonumber(line:match(what .. "[^%d%%]-(%d+)%%")) or tonumber(line:match("(%d+)%%%s*" .. what))
 end
 
--- Mount/swim scores from an item's tooltip lines: percent bonus, plus 1 swim point for water
--- breathing so a breathing helm still gets equipped.
+-- Stealth level from a line like "Increases your effective stealth level by 1" or "Stealth +5";
+-- detecting stealthed enemies doesn't count
+local function stealth(line)
+  if not line:find("stealth") or line:find("detect") then return end
+  return tonumber(line:match("stealth[^%d]-(%d+)")) or tonumber(line:match("(%d+)%s*stealth")) or 1
+end
+
+-- Mount/swim/stealth scores from an item's tooltip lines: percent bonus, plus 1 swim point for
+-- water breathing so a breathing helm still gets equipped.
 function XM.Score(lines, enchantID)
-  local score, named = { mount = 0, swim = 0 }, nil
+  local score, named = { mount = 0, swim = 0, stealth = 0 }, nil
   for i, text in ipairs(lines or {}) do
     local line = text:lower():gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
     if i == 1 then named = XM.EXCLUSIVE_NAMES[line] end
@@ -56,6 +63,7 @@ function XM.Score(lines, enchantID)
       local swim = percent(line, "swim%a* speed")
       if mount then score.mount = score.mount + mount * weight end
       if swim then score.swim = score.swim + swim * weight end
+      score.stealth = score.stealth + (stealth(line) or 0) * weight
       if line:find("water breathing") or line:find("underwater breathing") or line:find("breathe underwater") then
         score.swim = score.swim + 1
       end
@@ -107,7 +115,7 @@ local function planGroups(context, items)
   return plan, total
 end
 
--- Which item each slot should hold for `context` ("mount" or "swim").
+-- Which item each slot should hold for `context` ("mount", "swim" or "stealth").
 -- items: { { link, id, slots = {...}, score = {...}, equippedIn = slot? }, ... } covering bags
 -- and what's worn. Returns { [slot] = item } only for slots whose item should change.
 -- An exclusive mount item (Outrider's Gloves) is worn alone when the stacking items together
@@ -128,4 +136,23 @@ function XM.Plan(context, items)
   if not best or best.score.mount <= 0 or best.score.mount < total then return plan end
   if best.equippedIn then return {} end
   return { [best.slots[1]] = best }
+end
+
+-- Context to dress for, by priority: you can't be stealthed on a mount, and a rogue sneaking
+-- through water wants the stealth set
+function XM.Context(state)
+  if state.mounted then return "mount" end
+  if state.stealthed and state.stealthGear then return "stealth" end
+  if state.swimming then return "swim" end
+end
+
+-- Restores still owed: { [slot] = link } for items that aren't back in their slot yet and that
+-- the player still has (a sold or destroyed item is given up on)
+function XM.Unrestored(pending, wornID, count)
+  local due = {}
+  for slot, link in pairs(pending) do
+    local id = XM.ParseLink(link)
+    if id and wornID(slot) ~= id and count(id) > 0 then due[slot] = link end
+  end
+  return due
 end

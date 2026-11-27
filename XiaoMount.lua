@@ -47,24 +47,51 @@ local function equip(link, slot)
   C_Item.EquipItemByName(link, slot)
 end
 
--- Put back what each slot held before we swapped, except slots the new set is about to fill
+-- Slots whose original item should go back, except slots the new set is about to fill. They
+-- stay pending until the item is seen back in place: the game silently refuses gear swaps in
+-- combat, and dismounting can race the combat flag.
 local function restore(keep)
   for slot, link in pairs(XiaoMountDB.restore) do
     if not keep[slot] then
-      if not C_Item.IsEquippedItem(link) then equip(link, slot) end
+      XiaoMountDB.pending[slot] = link
       XiaoMountDB.restore[slot] = nil
     end
+  end
+end
+
+local function equipPlan(plan)
+  for slot, item in pairs(plan) do
+    XiaoMountDB.restore[slot] = XiaoMountDB.restore[slot] or XiaoMountDB.pending[slot]
+      or GetInventoryItemLink("player", slot)
+    XiaoMountDB.pending[slot] = nil
+    equip(item.link, slot)
   end
 end
 
 local function apply(context)
   local plan = context and XM.Plan(context, inventory()) or {}
   restore(plan)
-  for slot, item in pairs(plan) do
-    XiaoMountDB.restore[slot] = XiaoMountDB.restore[slot] or GetInventoryItemLink("player", slot)
-    equip(item.link, slot)
-  end
+  equipPlan(plan)
   XiaoMountDB.active = context
+end
+
+local MAX_TRIES = 5
+local tries = {}
+local function wornID(slot) return GetInventoryItemID("player", slot) end
+
+-- Equips pending restores again; true when anything was (re)tried
+local function settlePending()
+  local due = XM.Unrestored(XiaoMountDB.pending, wornID, C_Item.GetItemCount)
+  for slot, link in pairs(XiaoMountDB.pending) do
+    tries[slot] = due[slot] and (tries[slot] or 0) + 1 or nil
+    if not due[slot] or tries[slot] > MAX_TRIES then
+      if due[slot] then print("couldn't put back " .. link) end
+      XiaoMountDB.pending[slot], tries[slot] = nil, nil
+    else
+      equip(link, slot)
+    end
+  end
+  return next(XiaoMountDB.pending) ~= nil
 end
 
 -- cast info can be secret; an unreadable cast counts as casting
@@ -75,54 +102,67 @@ local function casting()
 end
 
 local function blocked()
-  return InCombatLockdown() or UnitIsDeadOrGhost("player") or casting() or GetCursorInfo() ~= nil
+  return InCombatLockdown() or UnitAffectingCombat("player") or UnitIsDeadOrGhost("player") or casting()
+    or GetCursorInfo() ~= nil
 end
 
 local function wanted()
-  if IsMounted() and not UnitOnTaxi("player") then return "mount" end
-  if IsSwimming() then return "swim" end
+  return XM.Context({
+    mounted = IsMounted() and not UnitOnTaxi("player"),
+    stealthed = IsStealthed(),
+    stealthGear = XiaoMountDB.stealth,
+    swimming = IsSwimming(),
+  })
 end
 
-local seen, seenSince, settleUntil = nil, 0, 0
+local seen, seenSince, settleUntil, verify = nil, 0, 0, false
 local function tick()
-  if not XiaoMountDB.enabled then return end
   local now = GetTime()
-  local context = wanted()
+  -- disabled counts as "nothing to dress for", so the gear goes back the same way
+  local context = XiaoMountDB.enabled and wanted() or nil
   if context ~= seen then seen, seenSince = context, now end
-  if context == XiaoMountDB.active or now < settleUntil or blocked() then return end
-  local delay = (XiaoMountDB.active == "swim" and not context) and DRY_DELAY or MOUNT_DELAY
-  if now - seenSince < delay then return end
-  apply(context)
-  settleUntil = now + SETTLE
+  if now < settleUntil or blocked() then return end
+  if context ~= XiaoMountDB.active then
+    local delay = (XiaoMountDB.active == "swim" and not context) and DRY_DELAY or MOUNT_DELAY
+    if now - seenSince < delay then return end
+    apply(context)
+    verify, settleUntil = true, now + SETTLE
+    return
+  end
+  -- one re-plan after each swap catches set items the game refused to equip
+  if verify and context then equipPlan(XM.Plan(context, inventory())) end
+  verify = false
+  if settlePending() then settleUntil = now + SETTLE end
 end
 
 local function report()
   local found = false
   for _, item in ipairs(inventory()) do
-    if item.slots and (item.score.mount > 0 or item.score.swim > 0) then
+    local score = item.score
+    if item.slots and (score.mount > 0 or score.swim > 0 or score.stealth > 0) then
       found = true
-      print(string.format("%s  mount %s  swim %s%s", item.link, item.score.mount, item.score.swim,
-        item.equippedIn and "  (worn)" or ""))
+      print(string.format("%s  mount %s  swim %s  stealth %s%s", item.link, score.mount, score.swim,
+        score.stealth, item.equippedIn and "  (worn)" or ""))
     end
   end
-  if not found then print("no mount or swim speed items found in bags or worn") end
+  if not found then print("no mount, swim or stealth items found in bags or worn") end
 end
 
 local commands = {
   on = function() XiaoMountDB.enabled = true; print("enabled") end,
-  off = function()
-    XiaoMountDB.enabled = false
-    if not blocked() then apply(nil) end
-    print("disabled")
-  end,
+  off = function() XiaoMountDB.enabled = false; print("disabled") end,
   scan = report,
+  stealth = function()
+    XiaoMountDB.stealth = not XiaoMountDB.stealth
+    print("stealth gear " .. (XiaoMountDB.stealth and "on" or "off"))
+  end,
 }
 
 SLASH_XIAOMOUNT1, SLASH_XIAOMOUNT2 = "/xiaomount", "/xm"
 SlashCmdList.XIAOMOUNT = function(msg)
   local command = commands[strtrim(msg or ""):lower()]
   if command then return command() end
-  print((XiaoMountDB.enabled and "enabled" or "disabled") .. ". /xm on | off | scan")
+  print((XiaoMountDB.enabled and "enabled" or "disabled") .. ". /xm on | off | scan | stealth")
 end
 
 local frame = CreateFrame("Frame")
@@ -132,6 +172,8 @@ frame:SetScript("OnEvent", function(self, _, name)
   self:UnregisterEvent("ADDON_LOADED")
   XiaoMountDB = XiaoMountDB or {}
   if XiaoMountDB.enabled == nil then XiaoMountDB.enabled = true end
+  if XiaoMountDB.stealth == nil then XiaoMountDB.stealth = true end
   XiaoMountDB.restore = XiaoMountDB.restore or {}
+  XiaoMountDB.pending = XiaoMountDB.pending or {}
   C_Timer.NewTicker(TICK, tick)
 end)

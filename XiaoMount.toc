@@ -2,8 +2,11 @@
 ## Title: |cff33ffccXiao|cffffffffMount
 ## Author: Smallguy
 ## Notes: Swaps in mount speed gear while mounted and swim speed gear while swimming, then puts your gear back. /xm
-## Version: 2.0.0
+## Version: 2.1.0
 ## SavedVariables: XiaoMountDB
+## X-License: MIT
+## X-Website: https://github.com/Kmschr/XiaoMount
+## X-Category: Inventory
 
 Logic.lua
 XiaoMount.lua
