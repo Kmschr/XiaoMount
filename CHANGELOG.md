@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+- Longer underwater breath items (Gill's Gills: "Underwater Breath lasts 50% longer") count as breathing gear
+
 ## 2.1.0
 
 - Stealth gear ("Increases your effective stealth level") is worn while stealthed (Stealth, Prowl); `/xm stealth` toggles it

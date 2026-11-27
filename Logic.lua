@@ -64,7 +64,7 @@ function XM.Score(lines, enchantID)
       if mount then score.mount = score.mount + mount * weight end
       if swim then score.swim = score.swim + swim * weight end
       score.stealth = score.stealth + (stealth(line) or 0) * weight
-      if line:find("water breathing") or line:find("underwater breathing") or line:find("breathe underwater") then
+      if line:find("water breath") or line:find("breathe underwater") then
         score.swim = score.swim + 1
       end
     end

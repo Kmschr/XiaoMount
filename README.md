@@ -9,7 +9,7 @@ The TurtleWoW version lives on the [`turtle`](https://github.com/Kmschr/XiaoMoun
 WoW: Forever has its own items, so XiaoMount reads item tooltips instead of keeping a list of item IDs:
 
 - **Mount speed**: "Increases mount speed by X%" on any armor, ring or trinket, plus the Mithril Spurs and Riding Skill glove enchants
-- **Swim speed**: "Increases swim speed by X%", and water breathing items (helms)
+- **Swim speed**: "Increases swim speed by X%", and water breathing / longer breath items (helms, Gill's Gills)
 - **Stealth**: "Increases your effective stealth level" (or "Stealth +X"), worn while stealthed (Rogue Stealth, Druid Prowl). Gear can't change in combat, so after opening from stealth you fight in it until combat ends; `/xm stealth` turns this off
 - **Zone-limited bonuses** such as The Desert Rose ("... in Desert areas") are only used when nothing better is available
 - **Outrider's Gloves** (5%, does not stack with other mount speed) are worn on their own unless your other mount speed items add up to more than 5%
@@ -44,6 +44,7 @@ tools/package.sh
 
 ## Updates
 
+- (2.1.1) Gill's Gills and other longer-breath items recognized
 - (2.1.0) Stealth gear while stealthed, `/xm stealth` toggle
 - (2.0.1) Gear reliably goes back after dismounting in combat (retried until it's back in place)
 - (2.0.0) WoW: Forever rewrite: tooltip-based gear detection, Forever swimming detection, Outrider's Gloves, `/xm on|off|scan`. TurtleWoW version moved to the `turtle` branch
